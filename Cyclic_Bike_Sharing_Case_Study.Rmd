@@ -1,0 +1,106 @@
+---
+title: "Cyclistic Bike-Share Analysis Case Study"
+author: "Sweety Gain"
+date: "2025-09-12"
+output: html_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+```
+
+# Introduction
+
+This analysis focuses on understanding how annual members and casual riders use Cyclistic bikes differently.
+The goal is to provide data-driven insights and actionable recommendations to convert casual riders into annual members.
+
+
+## Data Import and Cleaning 
+
+
+### Load datasets
+```{r}
+tripdata_2019 <- read_csv("C:/Users/sweety Gain/OneDrive/Documents/Cyclistic_Case_Study/Divvy_Trips_2019_Q1.csv")
+tripdata_2020 <- read_csv("C:/Users/sweety Gain/OneDrive/Documents/Cyclistic_Case_Study/Divvy_Trips_2020_Q1.csv")
+```
+### Combine datasets
+```{r}
+all_trips <- bind_rows(tripdata_2019, tripdata_2020)
+```
+
+### Data Cleaning
+```{r}
+all_trips <- all_trips %>%
+  select(trip_id, started_at, ended_at, member_casual, rideable_type, start_station_name, end_station_name) %>%
+  mutate(
+    started_at = as.POSIXct(started_at, format = "%Y-%m-%d %H:%M:%S"),
+    ended_at = as.POSIXct(ended_at, format = "%Y-%m-%d %H:%M:%S"),
+    ride_length = as.numeric(difftime(ended_at, started_at, units = "mins")),
+    day_of_week = weekdays(started_at)
+  ) %>%
+  filter(
+    !is.na(member_casual),
+    ride_length > 0,
+    ride_length <= 1440,
+    ended_at <= as.POSIXct("2020-03-31 23:59:59")
+  ) %>%
+  select(-trip_id)
+glimpse(all_trips)
+```
+### Avg length by user type
+```{r}
+avg_ride_length <- all_trips %>%
+  group_by(member_casual) %>%
+  summarize(avg_ride_length = mean(ride_length, na.rm = TRUE))
+
+avg_ride_length
+```
+### Number of rides by day of the week
+```{r}
+rides_by_day <- all_trips %>%
+  group_by(member_casual, day_of_week) %>%
+  summarize(num_rides = n())
+rides_by_day
+```
+
+### Visualization
+# Average Ride Length by User Type
+```{r}
+ggplot(avg_ride_length, aes(x = member_casual, y = avg_ride_length, fill = member_casual)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Ride Length by User Type",
+       x = "User Type",
+       y = "Average Ride Length (minutes)") +
+  theme_minimal()
+```
+
+### Number of Rides by Day of the Week
+```{r}
+ggplot(rides_by_day, aes(x = day_of_week, y = num_rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(title = "Number of Rides by Day of the Week",
+       x = "Day of Week",
+       y = "Number of Rides") +
+  theme_minimal()
+```
+
+## Key Findings
+
+- Annual members generally take shorter rides (average around 12 minutes) compared to casual riders (41 minutes).
+
+- Casual riders predominantly use bikes on weekends, while members are active on weekdays, particularly during commuting hours (7–9 AM and 4–6 PM).
+
+- Data shows a clear pattern that casual riders’ usage is leisure-focused, while members ride more for transportation needs.
+
+## Top Three Recommendations
+
+- Weekend Membership Promotions:
+Design marketing campaigns specifically targeting casual riders who use bikes during weekends to encourage annual memberships.
+
+- Digital Media Targeting:
+Use digital ads highlighting cost benefits and convenience of annual membership, especially during peak leisure periods.
+
+- Emphasize Commuter Benefits:
+Develop campaigns that focus on the ease and savings for daily commuting when using an annual membership.
